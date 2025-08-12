@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ESPACIO PUBLICITARIO DIGITAL Ecuador - Prototipo Interactivo</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    background-color: #f0f0f0;
+    margin: 0;
+    padding: 20px 10px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  .panel {
+    display: inline-block;
+    background: #ffffff;
+    padding: 18px;
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    max-width: calc(100% - 40px);
+  }
+  h1 { margin: 0 0 8px 0; font-size: 26px; }
+  .lead {
+    max-width: 720px;
+    margin: 8px auto 18px auto;
+    font-size: 16px;
+    line-height: 1.45;
+    color: #222;
+  }
+  #gridWrap { display: inline-block; background: white; padding: 10px; border-radius: 6px; }
+  #grid {
+    display: grid;
+    grid-template-columns: repeat(100, 10px);
+    grid-template-rows: repeat(100, 10px);
+    gap: 1px;
+    background: #ccc;
+    width: fit-content;
+    user-select: none;
+  }
+  .cell {
+    width: 10px;
+    height: 10px;
+    background: white;
+    cursor: pointer;
+    box-sizing: border-box;
+  }
+  .cell.selected {
+    background: rgba(0, 128, 255, 0.45);
+    outline: 1px solid rgba(0,0,0,0.06);
+  }
+  #contactBtn {
+    display: none;
+    margin-top: 16px;
+    padding: 10px 16px;
+    background: #25D366;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    border-radius: 6px;
+  }
+  .help { font-size: 13px; color: #555; margin-top: 10px; }
+  @media (max-width: 900px) {
+    #gridWrap { max-width: 100%; overflow: auto; }
+  }
+</style>
+</head>
+<body>
+  <div class="panel">
+    <h1>ESPACIO PUBLICITARIO DIGITAL Ecuador - Prototipo Interactivo</h1>
+    <p class="lead">
+      ¿Quieres que <strong>miles de personas</strong> vean tu negocio, emprendimiento, local o servicio? 📢
+      <strong>Reserva tu espacio</strong> en nuestro muro interactivo: elige las casillas, coloca tu imagen y destaca frente a visitantes 24/7.
+      Nosotros publicamos las imágenes por ti — tú solo nos indicas los índices y nosotros lo subimos. ¡Es rápido, visible y efectivo!
+    </p>
+
+    <div id="gridWrap">
+      <div id="grid"></div>
+    </div>
+
+    <div>
+      <button id="contactBtn">Contactar por WhatsApp</button>
+    </div>
+
+    <div class="help">Haz clic y arrastra para seleccionar/deseleccionar celdas. Pulsa <strong>F</strong> para previsualizar una imagen local en las celdas seleccionadas.</div>
+  </div>
+
+<script>
+  const grid = document.getElementById('grid');
+  const contactBtn = document.getElementById('contactBtn');
+
+  const imagenesCeldas = [
+    { index: 25, img: 'img/logo1.png' },
+    { index: 350, img: 'img/logo2.jpg' },
+    { index: 9999, img: 'img/logo3.png' }
+  ];
+  const mapaImagenes = new Map(imagenesCeldas.map(it => [it.index, it.img]));
+
+  let selectedCells = [];
+  let isMouseDown = false;
+  let isSelecting = true;
+
+  for (let i = 0; i < 10000; i++) {
+    const cell = document.createElement('div');
+    cell.classList.add('cell');
+    cell.dataset.index = i;
+
+    if (mapaImagenes.has(i)) {
+      const ruta = mapaImagenes.get(i);
+      cell.style.backgroundImage = `url('${ruta}')`;
+      cell.style.backgroundSize = 'cover';
+      cell.style.backgroundPosition = 'center';
+    }
+
+    cell.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      isMouseDown = true;
+      const alreadySelected = cell.classList.contains('selected');
+      isSelecting = !alreadySelected;
+      toggleCell(cell, isSelecting);
+    });
+
+    cell.addEventListener('mouseenter', () => {
+      if (isMouseDown) toggleCell(cell, isSelecting);
+    });
+
+    grid.appendChild(cell);
+  }
+
+  document.addEventListener('mouseup', () => { isMouseDown = false; });
+
+  function toggleCell(cell, forceState = null) {
+    const index = parseInt(cell.dataset.index, 10);
+    const shouldSelect = (forceState !== null) ? forceState : !cell.classList.contains('selected');
+
+    if (shouldSelect) {
+      if (!cell.classList.contains('selected')) {
+        cell.classList.add('selected');
+        selectedCells.push(index);
+      }
+    } else {
+      if (cell.classList.contains('selected')) {
+        cell.classList.remove('selected');
+        selectedCells = selectedCells.filter(i => i !== index);
+      }
+    }
+    contactBtn.style.display = selectedCells.length > 0 ? 'inline-block' : 'none';
+  }
+
+// Pulsar F para previsualizar imagen local en celdas seleccionadas
+document.addEventListener('keydown', (e) => {
+  if (e.key.toLowerCase() === 'f' && selectedCells.length > 0) {
+    e.preventDefault();
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = () => {
+      const file = input.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const cellSize = 10; // Tamaño de cada celda en px
+          const cols = 100; // Número de columnas totales
+
+          // Coordenadas de celdas seleccionadas
+          const filas = selectedCells.map(idx => Math.floor(idx / cols));
+          const columnas = selectedCells.map(idx => idx % cols);
+
+          const minFila = Math.min(...filas);
+          const maxFila = Math.max(...filas);
+          const minCol = Math.min(...columnas);
+          const maxCol = Math.max(...columnas);
+
+          const bloqueAncho = (maxCol - minCol + 1) * cellSize;
+          const bloqueAlto = (maxFila - minFila + 1) * cellSize;
+
+          selectedCells.forEach(idx => {
+            const fila = Math.floor(idx / cols);
+            const col = idx % cols;
+            const cell = grid.querySelector(`.cell[data-index="${idx}"]`);
+
+            cell.style.backgroundImage = `url('${ev.target.result}')`;
+            cell.style.backgroundRepeat = "no-repeat";
+            cell.style.backgroundSize = `${bloqueAncho}px ${bloqueAlto}px`;
+            cell.style.backgroundPosition = `${-(col - minCol) * cellSize}px ${-(fila - minFila) * cellSize}px`;
+          });
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+    input.click();
+  }
+});
+
+  contactBtn.addEventListener('click', () => {
+    const indicesOrdenados = selectedCells.slice().sort((a,b) => a - b);
+    const message = encodeURIComponent(`Hola, quiero reservar los espacios con índices: ${indicesOrdenados.join(', ')}`);
+    window.open(`https://wa.me/593999999999?text=${message}`, '_blank');
+  });
+</script>
+</body>
+</html>
